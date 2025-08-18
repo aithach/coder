@@ -16,7 +16,6 @@ import { type Message } from "@/components/ui/chat-message"
 import { CopyButton } from "@/components/ui/copy-button"
 import { MessageInput } from "@/components/ui/message-input"
 import { MessageList } from "@/components/ui/message-list"
-import { PromptSuggestions } from "@/components/ui/prompt-suggestions"
 
 interface ChatPropsBase {
   handleSubmit: (
@@ -193,14 +192,6 @@ export function Chat({
 
   return (
     <ChatContainer className={className}>
-      {isEmpty && append && suggestions ? (
-        <PromptSuggestions
-          label="Try these prompts ✨"
-          append={append}
-          suggestions={suggestions}
-        />
-      ) : null}
-
       {messages.length > 0 ? (
         <ChatMessages messages={messages}>
           <MessageList

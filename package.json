@@ -9,8 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/react": "^1.x",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-slot": "^1.2.3",
+    "ai": "^4.x",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",
@@ -21,6 +23,7 @@
     "react-dom": "19.1.0",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.4",
+    "react-syntax-highlighter": "^15.6.1",
     "remark-gfm": "^4.0.1",
     "remeda": "^2.30.0",
     "shiki": "^1.29.2",

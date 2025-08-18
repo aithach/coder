@@ -1,3 +1,4 @@
+import { MyChat } from "@/components/my/mychat";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -7,9 +8,25 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="flex h-screen">
-      <div className="w-[60%] h-full bg-blue-500">Column One</div>
-      <div className="w-[40%] h-full bg-green-500">Column Two</div>
+    <div className="h-screen">
+      <ResizablePanelGroup direction="horizontal" className="h-full">
+        {/* Left Panel */}
+        <ResizablePanel defaultSize={40} minSize={20} className="h-full">
+          <div className="h-full">
+            <MyChat />
+          </div>
+        </ResizablePanel>
+
+        {/* Resize Handle */}
+        <ResizableHandle />
+
+        {/* Right Panel */}
+        <ResizablePanel defaultSize={60} minSize={20} className="h-full">
+          <div className="h-full overflow-auto bg-green-500">
+            {/* Content for the right panel */}
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }
