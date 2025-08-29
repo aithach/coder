@@ -1,11 +1,6 @@
 import { getModel } from '@/app/model'
-import { convertToModelMessages, streamObject, UIMessage } from 'ai'
-import { z } from 'zod/v4'
-
-export const schema = z.object({
-  chat: z.string(),
-  code: z.string().describe('return the code'),
-})
+import { schema } from '@/lib/utils'
+import { streamObject } from 'ai'
 
 const model = getModel()
 export async function POST(req: Request) {

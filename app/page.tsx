@@ -7,8 +7,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { ChangeEvent, useEffect, useState } from 'react'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
 import tsx from 'react-syntax-highlighter/dist/esm/languages/prism/tsx'
-import { schema } from './api/chat/route'
-import { coy, vs, xonokai } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { schema } from '@/lib/utils'
 
 export default function Home() {
   SyntaxHighlighter.registerLanguage('tsx', tsx)
