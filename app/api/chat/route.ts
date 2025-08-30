@@ -17,11 +17,8 @@ export async function POST(req: NextRequest) {
     model: openrouter.chat(payload.model),
     prompt: payload.prompt,
     maxOutputTokens: 8192,
-    system: `
-    You are a Next.js 15 expert.
-    The chat section should be **VERY** short.
-    The code section should not have comments.
-    Your task is to assist the user in creating or modifying Next.js components or code, providing detailed explanations and helping with troubleshooting.`,
+    temperature: 0.1,
+    system: `You are a Next.js 15 expert. Keep responses brief. Show only necessary code changes without comments. Assist with building, updating, and troubleshooting components.`,
   })
 
   result.usage.then((u) => {

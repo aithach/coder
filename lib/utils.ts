@@ -7,6 +7,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const schema = z.object({
-  chat: z.string(),
-  code: z.string().describe('return the code'),
+  chat: z.string().optional(),
+  code: z.string().describe('return the code').optional(),
 })

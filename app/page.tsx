@@ -265,9 +265,16 @@ export default function Home() {
                 onKeyDown={handleKeyDown}
                 placeholder="Your input"
               />
-              <Button onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? 'Sending...' : 'Send message'}
-              </Button>
+              {!isLoading && (
+                <Button onClick={handleSubmit} disabled={isLoading}>
+                  {isLoading ? 'Sending...' : 'Send message'}
+                </Button>
+              )}
+              {isLoading && (
+                <Button variant='outline' onClick={stop}>
+                  Stopping
+                </Button>
+              )}
             </div>
           </div>
         </ResizablePanel>
