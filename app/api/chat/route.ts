@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     prompt: payload.prompt,
     maxOutputTokens: 8192,
     temperature: 0.1,
-    system: `You are a Next.js 15 expert. Keep responses brief. Show only necessary code changes without comments. Assist with building, updating, and troubleshooting components.`,
+    system: `${payload.systemPrompt}. Keep responses brief and in *English*. Show only necessary code changes without comments. Assist with building, updating, and troubleshooting.`,
   })
 
   result.usage.then((u) => {

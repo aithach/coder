@@ -9,23 +9,25 @@ import tsx from 'react-syntax-highlighter/dist/esm/languages/prism/tsx'
 import { vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { schema } from '@/lib/utils'
 import { Check, Copy, Plus, ChevronDown, ChevronUp } from 'lucide-react'
+import cpp from 'react-syntax-highlighter/dist/esm/languages/prism/cpp'
 
 SyntaxHighlighter.registerLanguage('tsx', tsx)
+SyntaxHighlighter.registerLanguage('cpp', cpp)
 
 const TokenTable = ({ usage }: { usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number } }) => (
   <table className="w-full text-left text-sm border-b">
     <thead className="bg-gray-100 text-gray-700">
       <tr>
-        <th className="px-4 py-0 border-r">Input Tokens</th>
-        <th className="px-4 py-0 border-r">Output Tokens</th>
-        <th className="px-4 py-0 border-r">Total Tokens</th>
+        <th className="px-1 py-0">Input</th>
+        <th className="px-1 py-0">Output</th>
+        <th className="px-1 py-0">Total</th>
       </tr>
     </thead>
     <tbody>
       <tr className="text-gray-800">
-        <td className="px-4 py-0 border-r">{usage.inputTokens ?? '-'}</td>
-        <td className="px-4 py-0 border-r">{usage.outputTokens ?? '-'}</td>
-        <td className="px-4 py-0 border-r">{usage.totalTokens ?? '-'}</td>
+        <td className="px-1 py-0">{usage.inputTokens ?? '-'}</td>
+        <td className="px-1 py-0">{usage.outputTokens ?? '-'}</td>
+        <td className="px-1 py-0">{usage.totalTokens ?? '-'}</td>
       </tr>
     </tbody>
   </table>
@@ -35,16 +37,16 @@ const ChatArea = ({ chat }: { chat: string | undefined }) => (
   <div className="flex-1 overflow-y-auto p-4">{chat ? <div dangerouslySetInnerHTML={{ __html: chat }} /> : null}</div>
 )
 
-const SyntaxHighlighterMemo = ({ code }: { code: string | undefined }) => (
-  <SyntaxHighlighter language="jsx" style={vs}>
+const SyntaxHighlighterMemo = ({ code, language }: { code: string | undefined; language: string }) => (
+  <SyntaxHighlighter language={language} style={vs}>
     {code ?? ''}
   </SyntaxHighlighter>
 )
 
 export default function Home() {
   const initialModels: string[] = [
-    'qwen/qwen3-coder',
     'qwen/qwen3-coder-30b-a3b-instruct',
+    'qwen/qwen3-coder',
     'x-ai/grok-code-fast-1',
     'google/gemini-2.5-flash',
     'deepseek/deepseek-chat-v3.1',
@@ -58,11 +60,6 @@ export default function Home() {
     }
     return initialModels
   })
-
-  const [selectedModel, setSelectedModel] = useState(() => {
-    return (typeof window !== 'undefined' && localStorage.getItem('selectedModel')) || models[0]
-  })
-
   const [newModelInput, setNewModelInput] = useState('')
   const [isModelPanelOpen, setIsModelPanelOpen] = useState(false)
 
@@ -71,9 +68,19 @@ export default function Home() {
     schema: schema,
   })
   const [input, setInput] = useState('')
+
+  const [selectedModel, setSelectedModel] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('selectedModel')) || initialModels[0]
+  })
+
   const [sample, setSample] = useState(() => {
     return (typeof window !== 'undefined' && localStorage.getItem('sample')) || ''
   })
+
+  const [systemPrompt, setSystemPrompt] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('systemPrompt')) || ''
+  })
+  const [isSystemPromptOpen, setIsSystemPromptOpen] = useState(false)
 
   const inputHistory = useRef<string[]>([])
   const historyIndex = useRef(-1)
@@ -88,9 +95,9 @@ export default function Home() {
     inputHistory.current = [...inputHistory.current, input]
     localStorage.setItem('inputHistory', JSON.stringify(inputHistory.current))
     historyIndex.current = -1
-    submit({ prompt: `${input} ${sample.length > 0 ? sample : ''}`, model: selectedModel })
+    submit({ prompt: `${input} ${sample.length > 0 ? sample : ''}`, model: selectedModel, systemPrompt })
     setInput('')
-  }, [input, sample, submit, selectedModel])
+  }, [input, sample, submit, selectedModel, systemPrompt])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -131,12 +138,20 @@ export default function Home() {
     localStorage.setItem('sample', sample)
   }, [sample])
 
+  useEffect(() => {
+    localStorage.setItem('systemPrompt', systemPrompt)
+  }, [systemPrompt])
+
   const handleInputChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value)
   }, [])
 
   const handleSampleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setSample(e.target.value)
+  }, [])
+
+  const handleSystemPromptChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
+    setSystemPrompt(e.target.value)
   }, [])
 
   const [usage, setUsage] = useState({})
@@ -191,6 +206,8 @@ export default function Home() {
     [models, selectedModel]
   )
 
+  const [language, setLanguage] = useState<'tsx' | 'cpp'>('tsx')
+
   return (
     <div className="h-screen">
       <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -205,50 +222,11 @@ export default function Home() {
                     </option>
                   ))}
                 </select>
-                <Button onClick={() => setIsModelPanelOpen(!isModelPanelOpen)} variant="outline" size="sm" className="flex items-center gap-1">
-                  {isModelPanelOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  Models
-                </Button>
               </div>
               <div className="ml-4 flex-shrink-0">
                 <TokenTable usage={usage} />
               </div>
             </div>
-            {isModelPanelOpen && (
-              <div className="border-b bg-gray-50 p-3">
-                <div className="flex items-center mb-2">
-                  <input
-                    type="text"
-                    value={newModelInput}
-                    onChange={(e) => setNewModelInput(e.target.value)}
-                    placeholder="Add new model"
-                    className="border rounded p-1 text-sm mr-1 flex-1"
-                  />
-                  <Button onClick={handleAddModel} size="sm" className="h-8 w-8 p-0">
-                    <Plus size={14} />
-                  </Button>
-                </div>
-                <div className="max-h-40 overflow-y-auto">
-                  <ul className="space-y-1">
-                    {models.map((model) => (
-                      <li key={model} className="flex items-center justify-between text-sm p-1 hover:bg-gray-100 rounded">
-                        <span className="truncate">{model}</span>
-                        {models.length > 1 && (
-                          <Button
-                            onClick={() => handleRemoveModel(model)}
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-                          >
-                            ×
-                          </Button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
             <ChatArea chat={object?.chat} />
             {error && <div className="p-4 text-red-500">Error: {error.message}</div>}
             <div className="flex-shrink-0 grid gap-2 p-4 border-t">
@@ -265,16 +243,84 @@ export default function Home() {
                 onKeyDown={handleKeyDown}
                 placeholder="Your input"
               />
-              {!isLoading && (
-                <Button onClick={handleSubmit} disabled={isLoading}>
-                  {isLoading ? 'Sending...' : 'Send message'}
-                </Button>
+              {isSystemPromptOpen && (
+                <Textarea
+                  className="min-h-[120px] max-h-[300px] overflow-y-auto"
+                  value={systemPrompt}
+                  onChange={handleSystemPromptChange}
+                  placeholder="System prompt"
+                />
               )}
-              {isLoading && (
-                <Button variant='outline' onClick={stop}>
-                  Stopping
-                </Button>
+              {isModelPanelOpen && (
+                <div className="border-t bg-gray-50 p-3 mt-2">
+                  <div className="flex items-center mb-2">
+                    <input
+                      type="text"
+                      value={newModelInput}
+                      onChange={(e) => setNewModelInput(e.target.value)}
+                      placeholder="Add new model"
+                      className="border rounded p-1 text-sm mr-1 flex-1"
+                    />
+                    <Button onClick={handleAddModel} size="sm" className="h-8 w-8 p-0">
+                      <Plus size={14} />
+                    </Button>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto">
+                    <ul className="space-y-1">
+                      {models.map((model) => (
+                        <li key={model} className="flex items-center justify-between text-sm p-1 hover:bg-gray-100 rounded">
+                          <span className="truncate">{model}</span>
+                          {models.length > 1 && (
+                            <Button
+                              onClick={() => handleRemoveModel(model)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
+                            >
+                              ×
+                            </Button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               )}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <select value={language} onChange={(e) => setLanguage(e.target.value as 'tsx' | 'cpp')} className="border rounded p-2 text-sm">
+                    <option value="tsx">TSX</option>
+                    <option value="cpp">C++</option>
+                  </select>
+                  <Button onClick={() => setIsModelPanelOpen(!isModelPanelOpen)} variant="outline" size="sm" className="flex items-center gap-1">
+                    {isModelPanelOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    Models
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => setIsSystemPromptOpen(!isSystemPromptOpen)}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1"
+                    >
+                      {isSystemPromptOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      System Prompt
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  {!isLoading && (
+                    <Button onClick={handleSubmit} disabled={isLoading}>
+                      {isLoading ? 'Sending...' : 'Send message'}
+                    </Button>
+                  )}
+                  {isLoading && (
+                    <Button variant="outline" onClick={stop}>
+                      Stopping
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </ResizablePanel>
@@ -305,7 +351,7 @@ export default function Home() {
                 Move to Sample
               </button>
             </div>
-            <SyntaxHighlighterMemo code={object?.code} />
+            <SyntaxHighlighterMemo code={object?.code} language={language} />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
