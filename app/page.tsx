@@ -1,7 +1,6 @@
 'use client'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
-
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ChangeEvent, useCallback, useEffect, useState } from 'react'
@@ -9,7 +8,7 @@ import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
 import tsx from 'react-syntax-highlighter/dist/esm/languages/prism/tsx'
 import { vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { schema } from '@/lib/utils'
-import { Check, Copy } from 'lucide-react'
+import { Check, Copy, Plus, ChevronDown, ChevronUp } from 'lucide-react'
 
 SyntaxHighlighter.registerLanguage('tsx', tsx)
 
@@ -43,17 +42,32 @@ const SyntaxHighlighterMemo = ({ code }: { code: string | undefined }) => (
 )
 
 export default function Home() {
-  const models = [
+  const initialModels: string[] = [
     'qwen/qwen3-30b-a3b-thinking-2507',
     'x-ai/grok-code-fast-1',
     'google/gemini-2.5-flash',
     'deepseek/deepseek-chat-v3.1',
     'qwen/qwen3-coder',
     'baidu/ernie-4.5-21b-a3b',
+    'mistralai/mistral-small-3.2-24b-instruct',
+    'qwen/qwen3-30b-a3b-instruct-2507',
+    'deepseek/deepseek-r1-0528-qwen3-8b',
   ]
+
+  const [models, setModels] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const storedModels = localStorage.getItem('models')
+      return storedModels ? JSON.parse(storedModels) : initialModels
+    }
+    return initialModels
+  })
+
   const [selectedModel, setSelectedModel] = useState(() => {
     return (typeof window !== 'undefined' && localStorage.getItem('selectedModel')) || models[0]
   })
+
+  const [newModelInput, setNewModelInput] = useState('')
+  const [isModelPanelOpen, setIsModelPanelOpen] = useState(false)
 
   const { isLoading, object, error, submit } = useObject({
     api: '/api/chat',
@@ -63,6 +77,10 @@ export default function Home() {
   const [sample, setSample] = useState(() => {
     return (typeof window !== 'undefined' && localStorage.getItem('sample')) || ''
   })
+
+  useEffect(() => {
+    localStorage.setItem('models', JSON.stringify(models))
+  }, [models])
 
   useEffect(() => {
     localStorage.setItem('selectedModel', selectedModel)
@@ -128,24 +146,84 @@ export default function Home() {
     [handleSubmit]
   )
 
+  const handleAddModel = useCallback(() => {
+    if (newModelInput.trim() && !models.includes(newModelInput.trim())) {
+      setModels((prev) => [...prev, newModelInput.trim()])
+      setNewModelInput('')
+    }
+  }, [newModelInput, models])
+
+  const handleRemoveModel = useCallback(
+    (modelToRemove: string) => {
+      if (models.length > 1) {
+        setModels((prev) => prev.filter((model: string) => model !== modelToRemove))
+        if (selectedModel === modelToRemove) {
+          setSelectedModel(models.filter((model: string) => model !== modelToRemove)[0])
+        }
+      }
+    },
+    [models, selectedModel]
+  )
+
   return (
     <div className="h-screen">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         <ResizablePanel defaultSize={40} minSize={20} className="h-full overflow-y-auto">
           <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between border-b bg-gray-50">
-              <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} className="border rounded p-2 text-sm">
-                {models.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-              </select>
-
+            <div className="flex items-center justify-between border-b bg-gray-50 p-2">
+              <div className="flex items-center space-x-2">
+                <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} className="border rounded p-2 text-sm">
+                  {models.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
+                <Button onClick={() => setIsModelPanelOpen(!isModelPanelOpen)} variant="outline" size="sm" className="flex items-center gap-1">
+                  {isModelPanelOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  Models
+                </Button>
+              </div>
               <div className="ml-4 flex-shrink-0">
                 <TokenTable usage={usage} />
               </div>
             </div>
+
+            {isModelPanelOpen && (
+              <div className="border-b bg-gray-50 p-3">
+                <div className="flex items-center mb-2">
+                  <input
+                    type="text"
+                    value={newModelInput}
+                    onChange={(e) => setNewModelInput(e.target.value)}
+                    placeholder="Add new model"
+                    className="border rounded p-1 text-sm mr-1 flex-1"
+                  />
+                  <Button onClick={handleAddModel} size="sm" className="h-8 w-8 p-0">
+                    <Plus size={14} />
+                  </Button>
+                </div>
+                <div className="max-h-40 overflow-y-auto">
+                  <ul className="space-y-1">
+                    {models.map((model) => (
+                      <li key={model} className="flex items-center justify-between text-sm p-1 hover:bg-gray-100 rounded">
+                        <span className="truncate">{model}</span>
+                        {models.length > 1 && (
+                          <Button
+                            onClick={() => handleRemoveModel(model)}
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
+                          >
+                            ×
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
 
             <ChatArea chat={object?.chat} />
 
