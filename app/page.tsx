@@ -33,9 +33,7 @@ const TokenTable = ({ usage }: { usage: { inputTokens?: number; outputTokens?: n
 )
 
 const ChatArea = ({ chat }: { chat: string | undefined }) => (
-  <div className="flex-1 overflow-y-auto p-4">
-    {chat ? <div dangerouslySetInnerHTML={{ __html: chat }} /> : null}
-  </div>
+  <div className="flex-1 overflow-y-auto p-4">{chat ? <div dangerouslySetInnerHTML={{ __html: chat }} /> : null}</div>
 )
 
 const SyntaxHighlighterMemo = ({ code }: { code: string | undefined }) => (
@@ -53,16 +51,18 @@ export default function Home() {
     'qwen/qwen3-coder',
     'baidu/ernie-4.5-21b-a3b',
   ]
-  const [selectedModel, setSelectedModel] = useState(() => 
-    localStorage.getItem('selectedModel') || models[0]
-  )
+  const [selectedModel, setSelectedModel] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('selectedModel')) || models[0]
+  })
 
-  const { isLoading, object, error, submit, } = useObject({
+  const { isLoading, object, error, submit } = useObject({
     api: '/api/chat',
     schema: schema,
   })
   const [input, setInput] = useState('')
-  const [sample, setSample] = useState(localStorage.getItem('sample') || '')
+  const [sample, setSample] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('sample')) || ''
+  })
 
   useEffect(() => {
     localStorage.setItem('selectedModel', selectedModel)
@@ -134,11 +134,7 @@ export default function Home() {
         <ResizablePanel defaultSize={40} minSize={20} className="h-full overflow-y-auto">
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between border-b bg-gray-50">
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="border rounded p-2 text-sm"
-              >
+              <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} className="border rounded p-2 text-sm">
                 {models.map((model) => (
                   <option key={model} value={model}>
                     {model}
