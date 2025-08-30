@@ -3,7 +3,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { ChangeEvent, useCallback, useEffect, useState } from 'react'
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter'
 import tsx from 'react-syntax-highlighter/dist/esm/languages/prism/tsx'
 import { vs } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -43,15 +43,12 @@ const SyntaxHighlighterMemo = ({ code }: { code: string | undefined }) => (
 
 export default function Home() {
   const initialModels: string[] = [
-    'qwen/qwen3-30b-a3b-thinking-2507',
+    'qwen/qwen3-coder',
+    'qwen/qwen3-coder-30b-a3b-instruct',
     'x-ai/grok-code-fast-1',
     'google/gemini-2.5-flash',
     'deepseek/deepseek-chat-v3.1',
-    'qwen/qwen3-coder',
-    'baidu/ernie-4.5-21b-a3b',
-    'mistralai/mistral-small-3.2-24b-instruct',
-    'qwen/qwen3-30b-a3b-instruct-2507',
-    'deepseek/deepseek-r1-0528-qwen3-8b',
+    'mistralai/codestral-2508',
   ]
 
   const [models, setModels] = useState<string[]>(() => {
@@ -69,7 +66,7 @@ export default function Home() {
   const [newModelInput, setNewModelInput] = useState('')
   const [isModelPanelOpen, setIsModelPanelOpen] = useState(false)
 
-  const { isLoading, object, error, submit } = useObject({
+  const { isLoading, object, error, submit, stop } = useObject({
     api: '/api/chat',
     schema: schema,
   })
@@ -77,6 +74,50 @@ export default function Home() {
   const [sample, setSample] = useState(() => {
     return (typeof window !== 'undefined' && localStorage.getItem('sample')) || ''
   })
+
+  const inputHistory = useRef<string[]>([])
+  const historyIndex = useRef(-1)
+
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('inputHistory')
+    if (savedHistory) inputHistory.current = JSON.parse(savedHistory)
+  }, [])
+
+  const handleSubmit = useCallback(() => {
+    if (!input.trim()) return
+    inputHistory.current = [...inputHistory.current, input]
+    localStorage.setItem('inputHistory', JSON.stringify(inputHistory.current))
+    historyIndex.current = -1
+    submit({ prompt: `${input} ${sample.length > 0 ? sample : ''}`, model: selectedModel })
+    setInput('')
+  }, [input, sample, submit, selectedModel])
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'ArrowUp' && inputHistory.current.length > 0) {
+        e.preventDefault()
+        if (historyIndex.current < inputHistory.current.length - 1) {
+          historyIndex.current += 1
+        } else if (historyIndex.current === -1) {
+          historyIndex.current = 0
+        }
+        setInput(inputHistory.current[inputHistory.current.length - 1 - historyIndex.current])
+      } else if (e.key === 'ArrowDown' && historyIndex.current >= 0) {
+        e.preventDefault()
+        if (historyIndex.current > 0) {
+          historyIndex.current -= 1
+          setInput(inputHistory.current[inputHistory.current.length - 1 - historyIndex.current])
+        } else {
+          historyIndex.current = -1
+          setInput('')
+        }
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        handleSubmit()
+      }
+    },
+    [handleSubmit]
+  )
 
   useEffect(() => {
     localStorage.setItem('models', JSON.stringify(models))
@@ -97,11 +138,6 @@ export default function Home() {
   const handleSampleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     setSample(e.target.value)
   }, [])
-
-  const handleSubmit = useCallback(() => {
-    submit({ prompt: `${input} ${sample.length > 0 ? sample : ''}`, model: selectedModel })
-    setInput('')
-  }, [input, sample, submit, selectedModel])
 
   const [usage, setUsage] = useState({})
 
@@ -135,16 +171,6 @@ export default function Home() {
       setSample(object.code)
     }
   }, [object?.code])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        handleSubmit()
-      }
-    },
-    [handleSubmit]
-  )
 
   const handleAddModel = useCallback(() => {
     if (newModelInput.trim() && !models.includes(newModelInput.trim())) {
@@ -188,7 +214,6 @@ export default function Home() {
                 <TokenTable usage={usage} />
               </div>
             </div>
-
             {isModelPanelOpen && (
               <div className="border-b bg-gray-50 p-3">
                 <div className="flex items-center mb-2">
@@ -224,11 +249,8 @@ export default function Home() {
                 </div>
               </div>
             )}
-
             <ChatArea chat={object?.chat} />
-
             {error && <div className="p-4 text-red-500">Error: {error.message}</div>}
-
             <div className="flex-shrink-0 grid gap-2 p-4 border-t">
               <Textarea
                 className="min-h-[120px] max-h-[300px] overflow-y-auto"
